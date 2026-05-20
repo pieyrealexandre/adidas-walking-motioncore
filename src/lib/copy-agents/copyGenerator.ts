@@ -198,3 +198,7 @@ export async function generateCopy(
 
   return { results, withinLimit: true }
 }
+
+// Object form for compatibility with code that expects the bball API shape:
+//   copyGenerator.generate(request)
+export const copyGenerator = { generate: generateCopy }

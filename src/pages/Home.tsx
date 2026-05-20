@@ -19,9 +19,12 @@ export function Home() {
         <div className="block rounded-md border border-dashed border-neutral-200 px-4 py-3 text-sm text-neutral-400">
           Image Generation (coming in Phase 4)
         </div>
-        <div className="block rounded-md border border-dashed border-neutral-200 px-4 py-3 text-sm text-neutral-400">
-          Cropping Toolkit (coming in Phase 3)
-        </div>
+        <Link
+          to="/toolkit"
+          className="block rounded-md border border-neutral-200 bg-white px-4 py-3 text-sm font-medium text-neutral-900 hover:border-neutral-300 hover:bg-neutral-50"
+        >
+          Cropping Toolkit →
+        </Link>
         <div className="block rounded-md border border-dashed border-neutral-200 px-4 py-3 text-sm text-neutral-400">
           Editor / Notebook (coming in Phase 5)
         </div>

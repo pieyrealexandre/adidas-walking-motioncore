@@ -13,6 +13,9 @@ export function Layout() {
             <Link to="/copy-generator" className="hover:text-neutral-900">
               Copy Generator
             </Link>
+            <Link to="/toolkit" className="hover:text-neutral-900">
+              Cropping Toolkit
+            </Link>
           </nav>
         </div>
       </header>
