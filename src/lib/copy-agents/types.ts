@@ -45,6 +45,8 @@ export interface CopyVariation {
   subject?: string
   preheader?: string
   snippet?: string
+  /** Free-form combined text used by some touchpoints (e.g. UGC, app PDP callout). */
+  fullText?: string
   characterCount: number
   flaggedIssues?: FlaggedIssue[]
 }
