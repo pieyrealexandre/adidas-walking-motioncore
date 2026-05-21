@@ -1,55 +1,30 @@
-import { Link, Outlet, useNavigate } from 'react-router-dom'
-import { CATEGORY_DISPLAY_NAME } from '@/running-japan'
-import { useAuth } from '@/contexts/AuthContext'
-import { supabase } from '@/integrations/supabase/client'
+// Adapted from bball repo (src/components/Layout.tsx).
+//
+// Deltas vs bball:
+//   - No Header component rendered (bball's Header is already empty in v1).
+//   - GenerationProgressWidget omitted — that widget polls for completion and
+//     shows a floating progress card. Adding it later is straightforward once
+//     the rest of the lifestyle flow is stable.
+import { Outlet, useLocation } from 'react-router-dom'
+import Sidebar from './Sidebar'
+import { cn } from '@/lib/utils'
 
-export function Layout() {
-  const { user } = useAuth()
-  const navigate = useNavigate()
+const FULL_BLEED_ROUTES = ['/image-creation/lifestyle']
 
-  const onSignOut = async () => {
-    await supabase.auth.signOut()
-    navigate('/login', { replace: true })
-  }
+const Layout = () => {
+  const location = useLocation()
+  const isFullBleed = FULL_BLEED_ROUTES.includes(location.pathname)
 
   return (
-    <div className="min-h-screen bg-neutral-50">
-      <header className="border-b border-neutral-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <Link to="/" className="text-sm font-semibold tracking-tight text-neutral-900">
-            adiGen <span className="text-neutral-400">/ {CATEGORY_DISPLAY_NAME}</span>
-          </Link>
-          <nav className="flex items-center gap-4 text-sm text-neutral-600">
-            <Link to="/copy-generator" className="hover:text-neutral-900">
-              Copy Generator
-            </Link>
-            <Link to="/toolkit" className="hover:text-neutral-900">
-              Cropping Toolkit
-            </Link>
-            <Link to="/lifestyle" className="hover:text-neutral-900">
-              Lifestyle Gen
-            </Link>
-            <Link to="/gallery" className="hover:text-neutral-900">
-              Gallery
-            </Link>
-            {user ? (
-              <>
-                <span className="text-neutral-400">{user.email}</span>
-                <button onClick={onSignOut} className="text-neutral-600 hover:text-neutral-900">
-                  Sign out
-                </button>
-              </>
-            ) : (
-              <Link to="/login" className="rounded-md bg-neutral-900 px-3 py-1.5 text-white hover:bg-neutral-800">
-                Sign in
-              </Link>
-            )}
-          </nav>
-        </div>
-      </header>
-      <main className="mx-auto max-w-6xl px-6 py-10">
-        <Outlet />
-      </main>
+    <div className="h-screen bg-background flex w-full">
+      <Sidebar />
+      <div className="flex-1 flex flex-col min-w-0">
+        <main className={cn('flex-1 overflow-auto h-screen', !isFullBleed && 'p-2 sm:p-4 lg:p-6')}>
+          <Outlet />
+        </main>
+      </div>
     </div>
   )
 }
+
+export default Layout
