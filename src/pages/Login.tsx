@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from 'react'
+import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
@@ -14,11 +14,14 @@ export function Login() {
 
   const redirectTo = (location.state as { from?: string } | null)?.from ?? '/'
 
+  useEffect(() => {
+    if (!loading && user) {
+      navigate(redirectTo, { replace: true })
+    }
+  }, [loading, user, navigate, redirectTo])
+
   if (loading) return <p className="text-neutral-500">Loading…</p>
-  if (user) {
-    navigate(redirectTo, { replace: true })
-    return null
-  }
+  if (user) return null
 
   const onSubmit = async (e: FormEvent) => {
     e.preventDefault()
@@ -30,7 +33,7 @@ export function Login() {
       setError(signInError.message)
       return
     }
-    navigate(redirectTo, { replace: true })
+    // The useEffect above will handle redirect once `user` updates via AuthContext.
   }
 
   return (

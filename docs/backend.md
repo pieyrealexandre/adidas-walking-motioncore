@@ -121,6 +121,14 @@ gcloud storage buckets create gs://saga-running-japan-images-eu \
   --location=europe-west1 \
   --project=manifest-vault-452305-a8
 
+# 1b. Apply CORS so the browser can PUT to signed URLs. The bucket
+#     needs to whitelist the frontend's origin (or `*` during dev).
+#     bball's bucket only allows GET/HEAD — adiGen's needs PUT too.
+#     CORS JSON committed at docs/lifecycle/cors-running-japan.json.
+gcloud storage buckets update gs://saga-running-japan-images-eu \
+  --cors-file=docs/lifecycle/cors-running-japan.json \
+  --project=manifest-vault-452305-a8
+
 # 2. Create the runtime service account
 gcloud iam service-accounts create adigen-runtime \
   --display-name="adiGen runtime" \
@@ -252,7 +260,8 @@ Recommended: set up a per-service billing alert at $50/month on Cloud Run + Stor
 | 500 from `/api/upload-assets/init` with log "Permission 'iam.serviceAccounts.signBlob' denied" | SA missing the self-impersonation grant required to mint v4 signed URLs from Cloud Run (no keyfile path uses metadata-token + IAM signBlob) | `gcloud iam service-accounts add-iam-policy-binding $SA --member="serviceAccount:$SA" --role="roles/iam.serviceAccountTokenCreator"`. Wait 60-90s for IAM propagation. |
 | 500 from `/api/upload-assets/init` with log "Storage permission denied" | SA missing `roles/storage.objectAdmin` on the target bucket | `gcloud storage buckets add-iam-policy-binding gs://saga-running-japan-images-eu --member=serviceAccount:$SA --role=roles/storage.objectAdmin` |
 | 401 from any backend route with valid Supabase JWT | `SUPA_SERVICE_ROLE_KEY` env var on Cloud Run points at a service_role JWT from a different project (e.g. legacy Singapore key still mounted) | Re-mount with the correct project's key: `gcloud run services update adigen-running-japan-backend --update-secrets="SUPA_SERVICE_ROLE_KEY=EU_SUPA_SERVICE_ROLE_KEY:latest"` |
-| CORS error in browser console | Vercel deploy URL not allowed (only after we tighten CORS — not yet) | Update CORS config in bball repo, redeploy |
+| CORS error in browser console on `/api/*` | Vercel deploy URL not allowed by backend CORS (only relevant after we tighten CORS — currently `origin: true` allows everything) | Update CORS config in bball repo `backend/server.js`, redeploy |
+| CORS error in browser on a GCS signed URL (PUT) | The TARGET BUCKET's CORS config doesn't allow PUT from your origin | Update `docs/lifecycle/cors-running-japan.json` (or per-category equivalent), apply via `gcloud storage buckets update gs://<bucket> --cors-file=<json>`. v1 uses `origin: ["*"]` — tighten before prod. |
 | 503 / cold start timeout | Cloud Run scaled to zero, first request is slow | Normal. Set `--min-instances=1` if latency-critical. ~$5/mo extra. |
 | Uploads land in wrong bucket | `GCS_BUCKET_NAME` env var wrong on the service | `gcloud run services describe adigen-running-japan-backend --region europe-west1` to inspect, update via `--update-env-vars` |
 | Edge Function returns 401 with valid JWT | The Edge Function's own `supabase.auth.getUser(jwt)` rejected the token (e.g. it's a service_role JWT, not a user access token) | Use a real user's access token from `supabase.auth.getSession()` |
