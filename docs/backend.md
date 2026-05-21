@@ -38,8 +38,8 @@ When we add a third category (e.g. football, tennis), it gets its own Cloud Run 
 
 | Service | Cloud Run name | URL | Bucket |
 |---|---|---|---|
-| bball | `adidas-basketball-backend` | `https://adidas-basketball-backend-836947241942.europe-west1.run.app` | `sagastudios-gnutts` |
-| adiGen — running-japan | `adigen-running-japan-backend` *(TBD — needs initial deploy)* | TBD post-deploy | `saga-running-japan-images-eu` *(TBD — needs creation)* |
+| bball | `adidas-basketball-backend` | `https://adidas-basketball-backend-836947241942.europe-west1.run.app` | `sagastudios-gnutts` (EU multi-region) |
+| adiGen — running-japan | `adigen-running-japan-backend` | `https://adigen-running-japan-backend-836947241942.europe-west1.run.app` | `saga-running-japan-images-eu` (europe-west1) |
 
 Both run in **europe-west1** (Belgium) to match the EU residency mandate and minimize Edge Function → backend latency (Supabase is in eu-central-1 / Frankfurt, ~250 ms RTT — acceptable).
 
@@ -111,36 +111,57 @@ Prerequisites:
 
 Steps:
 
-```powershell
-# 1. Create the GCS bucket for running-japan
-gcloud storage buckets create gs://saga-running-japan-images-eu `
-  --location=europe-west1 `
-  --uniform-bucket-level-access `
-  --public-access-prevention=enforced
+**Status: already deployed on 2026-05-21.** The steps below are the record of what was run, in case a future category needs to repeat the pattern or the running-japan service ever needs to be recreated.
 
-# 2. Optional: lifecycle policy (storage class transitions for cost)
-#    Standard → Nearline at 30d → Coldline at 90d → Archive at 365d
-#    Saves ~50-85% per GB without deleting anything
-gcloud storage buckets update gs://saga-running-japan-images-eu --lifecycle-file=lifecycle.json
+```bash
+# 1. Create the GCS bucket — NO uniform-bucket-level-access (the bball
+#    uploadAssets.js code uses per-object `public: true` ACLs, which is
+#    incompatible with UBLA).
+gcloud storage buckets create gs://saga-running-japan-images-eu \
+  --location=europe-west1 \
+  --project=manifest-vault-452305-a8
 
-# 3. Deploy the bball image as a new Cloud Run service with running-japan config
-gcloud run deploy adigen-running-japan-backend `
-  --image gcr.io/manifest-vault-452305-a8/adidas-basketball-backend `
-  --region europe-west1 `
-  --platform managed `
-  --allow-unauthenticated `
-  --set-env-vars "SUPABASE_URL=https://ylgmmgdkcazhnubxyoho.supabase.co,GCS_BUCKET_NAME=saga-running-japan-images-eu,GCP_PROJECT_ID=manifest-vault-452305-a8,DEFAULT_SUPABASE_PROJECT_ID=ylgmmgdkcazhnubxyoho,RATE_LIMIT_MAX=100" `
-  --set-secrets "SUPA_SERVICE_ROLE_KEY=SUPA_SERVICE_ROLE_KEY:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CROPPING_PROTOTYPE_ANTHROPIC_KEY=CROPPING_PROTOTYPE_ANTHROPIC_KEY:latest,FAL_API_KEY=FAL_API_KEY:latest" `
-  --memory 1Gi `
-  --cpu 1 `
-  --max-instances 10 `
-  --service-account adigen-runtime@manifest-vault-452305-a8.iam.gserviceaccount.com
+# 2. Create the runtime service account
+gcloud iam service-accounts create adigen-runtime \
+  --display-name="adiGen runtime" \
+  --project=manifest-vault-452305-a8
 
-# 4. Capture the service URL (output from previous command), update adiGen .env.local
-#    VITE_BACKEND_URL=https://adigen-running-japan-backend-<hash>.europe-west1.run.app
+# 3. Grant IAM roles
+SA=adigen-runtime@manifest-vault-452305-a8.iam.gserviceaccount.com
+
+#    Bucket: full object admin
+gcloud storage buckets add-iam-policy-binding gs://saga-running-japan-images-eu \
+  --member="serviceAccount:$SA" --role="roles/storage.objectAdmin"
+
+#    Project-level: logging + monitoring (so Cloud Run can emit logs/metrics)
+gcloud projects add-iam-policy-binding manifest-vault-452305-a8 \
+  --member="serviceAccount:$SA" --role="roles/logging.logWriter" --condition=None
+gcloud projects add-iam-policy-binding manifest-vault-452305-a8 \
+  --member="serviceAccount:$SA" --role="roles/monitoring.metricWriter" --condition=None
+
+#    Secret Manager: read access to each secret the service consumes
+for SECRET in SUPA_SERVICE_ROLE_KEY SUPABASE_ANON_KEY ANTHROPIC_API_KEY CROPPING_PROTOTYPE_ANTHROPIC_KEY FAL_API_KEY; do
+  gcloud secrets add-iam-policy-binding $SECRET \
+    --member="serviceAccount:$SA" --role="roles/secretmanager.secretAccessor" \
+    --project=manifest-vault-452305-a8
+done
+
+# 4. Deploy the bball image as a new Cloud Run service with running-japan config
+gcloud run deploy adigen-running-japan-backend \
+  --image=gcr.io/manifest-vault-452305-a8/adidas-basketball-backend:latest \
+  --region=europe-west1 \
+  --platform=managed \
+  --allow-unauthenticated \
+  --service-account=$SA \
+  --memory=1Gi --cpu=1 --max-instances=10 --port=8080 \
+  --set-env-vars="DEFAULT_SUPABASE_PROJECT_ID=ylgmmgdkcazhnubxyoho,GCS_BUCKET_NAME=saga-running-japan-images-eu,GCP_PROJECT_ID=manifest-vault-452305-a8,RATE_LIMIT_MAX=100" \
+  --set-secrets="SUPA_SERVICE_ROLE_KEY=SUPA_SERVICE_ROLE_KEY:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CROPPING_PROTOTYPE_ANTHROPIC_KEY=CROPPING_PROTOTYPE_ANTHROPIC_KEY:latest,FAL_API_KEY=FAL_API_KEY:latest" \
+  --project=manifest-vault-452305-a8
 ```
 
-The service account `adigen-runtime@...` needs `roles/storage.objectAdmin` on `saga-running-japan-images-eu` to write uploads, and `roles/secretmanager.secretAccessor` on the listed secrets.
+**Note on `DEFAULT_SUPABASE_PROJECT_ID`**: the bball backend's `getSupabaseConfig()` has a static map of project refs with hardcoded URLs (for legacy reasons — see `backend/server.js` in the bball repo). For any project ref NOT in that static map (including `ylgmmgdkcazhnubxyoho`), the function falls back to constructing the URL dynamically (`https://${projectId}.supabase.co`) and reads `SUPA_SERVICE_ROLE_KEY` / `SUPABASE_ANON_KEY` from env. So we don't need to set `SUPABASE_FUNCTIONS_URL` — the dynamic fallback handles it correctly.
+
+**Lifecycle policy** (deferred): GCS storage-class transitions (Standard → Nearline at 30d → Coldline at 90d → Archive at 365d) save ~50-85% per GB without deletion. Set up via `gcloud storage buckets update gs://saga-running-japan-images-eu --lifecycle-file=lifecycle.json` once a lifecycle.json is written. Recommended before bucket has >100 GB of Standard-tier content.
 
 ---
 
@@ -226,11 +247,12 @@ Recommended: set up a per-service billing alert at $50/month on Cloud Run + Stor
 
 ## Open questions / TBD
 
-- [ ] **Initial deploy** of `adigen-running-japan-backend` Cloud Run service hasn't happened yet. Use the section above to deploy when ready.
-- [ ] **`saga-running-japan-images-eu` GCS bucket** doesn't exist yet. Create as part of the deploy.
-- [ ] **Service account** `adigen-runtime@...` doesn't exist yet. Create with `gcloud iam service-accounts create adigen-runtime --display-name='adiGen runtime'`, grant the IAM roles listed above.
-- [ ] **Lifecycle policy JSON** (`lifecycle.json`) for storage-class transitions — write this and commit to `docs/lifecycle/running-japan.json`.
-- [ ] **Backend CI/CD trigger**: when bball backend merges a change, who rolls the new image to `adigen-running-japan-backend`? Probably a Cloud Build trigger on bball repo `main` that updates both services.
+- [x] ~~Initial deploy of `adigen-running-japan-backend` Cloud Run service~~ — done 2026-05-21.
+- [x] ~~`saga-running-japan-images-eu` GCS bucket~~ — created 2026-05-21, europe-west1.
+- [x] ~~Service account `adigen-runtime@...`~~ — created 2026-05-21 with IAM grants.
+- [ ] **Lifecycle policy JSON** (`lifecycle.json`) for storage-class transitions — write this and commit to `docs/lifecycle/running-japan.json`. Not urgent until bucket has meaningful content.
+- [ ] **Backend CI/CD trigger**: when bball backend merges a change, who rolls the new image to `adigen-running-japan-backend`? Probably a Cloud Build trigger on bball repo `main` that updates both services. Manual `gcloud run services update` works in the meantime — see "Updating the deployed service" section.
+- [ ] **CORS tightening** before prod launch — bball backend currently uses `origin: true` (any origin). Lock to the actual adiGen Vercel domains pre-launch. Change lives in bball repo.
 
 ---
 
