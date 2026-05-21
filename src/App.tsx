@@ -4,6 +4,7 @@ import { Toaster } from 'sonner'
 import { AuthProvider } from '@/contexts/AuthContext'
 import { Layout } from '@/components/Layout'
 import { Home } from '@/pages/Home'
+import { Login } from '@/pages/Login'
 import { CopyGenerator } from '@/pages/CopyGenerator'
 import CroppingToolkit from '@/pages/CroppingToolkit'
 
@@ -17,6 +18,7 @@ function App() {
           <Routes>
             <Route element={<Layout />}>
               <Route index element={<Home />} />
+              <Route path="login" element={<Login />} />
               <Route path="copy-generator" element={<CopyGenerator />} />
               <Route path="toolkit" element={<CroppingToolkit />} />
             </Route>

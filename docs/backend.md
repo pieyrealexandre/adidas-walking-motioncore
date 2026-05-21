@@ -139,12 +139,24 @@ gcloud projects add-iam-policy-binding manifest-vault-452305-a8 \
 gcloud projects add-iam-policy-binding manifest-vault-452305-a8 \
   --member="serviceAccount:$SA" --role="roles/monitoring.metricWriter" --condition=None
 
-#    Secret Manager: read access to each secret the service consumes
-for SECRET in SUPA_SERVICE_ROLE_KEY SUPABASE_ANON_KEY ANTHROPIC_API_KEY CROPPING_PROTOTYPE_ANTHROPIC_KEY FAL_API_KEY; do
+#    Secret Manager: read access to each secret the service consumes.
+#    Note: the EU project's service_role and anon keys are NEW secrets
+#    (EU_SUPA_SERVICE_ROLE_KEY, EU_SUPABASE_ANON_KEY) because the legacy
+#    SUPA_SERVICE_ROLE_KEY / SUPABASE_ANON_KEY secrets still hold the
+#    Singapore JWTs (stale post-migration).
+for SECRET in EU_SUPA_SERVICE_ROLE_KEY EU_SUPABASE_ANON_KEY ANTHROPIC_API_KEY CROPPING_PROTOTYPE_ANTHROPIC_KEY FAL_API_KEY; do
   gcloud secrets add-iam-policy-binding $SECRET \
     --member="serviceAccount:$SA" --role="roles/secretmanager.secretAccessor" \
     --project=manifest-vault-452305-a8
 done
+
+#    Self-impersonation: required for v4 signed URLs (uploadAssets.js
+#    mints upload URLs via `bucket.file().getSignedUrl({version:'v4'})`
+#    which internally calls IAM signBlob on the runtime SA's behalf).
+gcloud iam service-accounts add-iam-policy-binding $SA \
+  --member="serviceAccount:$SA" \
+  --role="roles/iam.serviceAccountTokenCreator" \
+  --project=manifest-vault-452305-a8
 
 # 4. Deploy the bball image as a new Cloud Run service with running-japan config
 gcloud run deploy adigen-running-japan-backend \
@@ -155,7 +167,7 @@ gcloud run deploy adigen-running-japan-backend \
   --service-account=$SA \
   --memory=1Gi --cpu=1 --max-instances=10 --port=8080 \
   --set-env-vars="DEFAULT_SUPABASE_PROJECT_ID=ylgmmgdkcazhnubxyoho,GCS_BUCKET_NAME=saga-running-japan-images-eu,GCP_PROJECT_ID=manifest-vault-452305-a8,RATE_LIMIT_MAX=100" \
-  --set-secrets="SUPA_SERVICE_ROLE_KEY=SUPA_SERVICE_ROLE_KEY:latest,SUPABASE_ANON_KEY=SUPABASE_ANON_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CROPPING_PROTOTYPE_ANTHROPIC_KEY=CROPPING_PROTOTYPE_ANTHROPIC_KEY:latest,FAL_API_KEY=FAL_API_KEY:latest" \
+  --set-secrets="SUPA_SERVICE_ROLE_KEY=EU_SUPA_SERVICE_ROLE_KEY:latest,SUPABASE_ANON_KEY=EU_SUPABASE_ANON_KEY:latest,ANTHROPIC_API_KEY=ANTHROPIC_API_KEY:latest,CROPPING_PROTOTYPE_ANTHROPIC_KEY=CROPPING_PROTOTYPE_ANTHROPIC_KEY:latest,FAL_API_KEY=FAL_API_KEY:latest" \
   --project=manifest-vault-452305-a8
 ```
 
@@ -237,7 +249,9 @@ Recommended: set up a per-service billing alert at $50/month on Cloud Run + Stor
 | Symptom | Likely cause | Fix |
 |---|---|---|
 | 401 on every request | adiGen `.env.local` has stale anon key or wrong Supabase URL | Reset from Supabase dashboard, restart dev server |
-| 500 from `/api/upload-assets/init` | Service account missing `roles/storage.objectAdmin` on the bucket | `gcloud storage buckets add-iam-policy-binding gs://saga-running-japan-images-eu --member=serviceAccount:adigen-runtime@... --role=roles/storage.objectAdmin` |
+| 500 from `/api/upload-assets/init` with log "Permission 'iam.serviceAccounts.signBlob' denied" | SA missing the self-impersonation grant required to mint v4 signed URLs from Cloud Run (no keyfile path uses metadata-token + IAM signBlob) | `gcloud iam service-accounts add-iam-policy-binding $SA --member="serviceAccount:$SA" --role="roles/iam.serviceAccountTokenCreator"`. Wait 60-90s for IAM propagation. |
+| 500 from `/api/upload-assets/init` with log "Storage permission denied" | SA missing `roles/storage.objectAdmin` on the target bucket | `gcloud storage buckets add-iam-policy-binding gs://saga-running-japan-images-eu --member=serviceAccount:$SA --role=roles/storage.objectAdmin` |
+| 401 from any backend route with valid Supabase JWT | `SUPA_SERVICE_ROLE_KEY` env var on Cloud Run points at a service_role JWT from a different project (e.g. legacy Singapore key still mounted) | Re-mount with the correct project's key: `gcloud run services update adigen-running-japan-backend --update-secrets="SUPA_SERVICE_ROLE_KEY=EU_SUPA_SERVICE_ROLE_KEY:latest"` |
 | CORS error in browser console | Vercel deploy URL not allowed (only after we tighten CORS — not yet) | Update CORS config in bball repo, redeploy |
 | 503 / cold start timeout | Cloud Run scaled to zero, first request is slow | Normal. Set `--min-instances=1` if latency-critical. ~$5/mo extra. |
 | Uploads land in wrong bucket | `GCS_BUCKET_NAME` env var wrong on the service | `gcloud run services describe adigen-running-japan-backend --region europe-west1` to inspect, update via `--update-env-vars` |
