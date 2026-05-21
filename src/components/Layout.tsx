@@ -9,7 +9,7 @@ import { Outlet, useLocation } from 'react-router-dom'
 import Sidebar from './Sidebar'
 import { cn } from '@/lib/utils'
 
-const FULL_BLEED_ROUTES = ['/image-creation/lifestyle']
+const FULL_BLEED_ROUTES = ['/image-creation/lifestyle', '/image-creation/product', '/image-creation/group']
 
 const Layout = () => {
   const location = useLocation()
