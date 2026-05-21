@@ -128,16 +128,69 @@ export interface RunningModel {
   id: string
   gender: 'male' | 'female'
   name: string
+  /** Face reference image sent to the AI on every generation. */
   faceUrl: string
-  /** Back-of-head reference for POSES_WITH_BACK_VIEW. Optional. */
+  /** Smaller image used in the picker UI; falls back to faceUrl. */
+  thumbnailUrl?: string
+  /** Back-of-head reference, only used for poses with view === 'back'. */
   backUrl?: string
-  description?: string
+  /** Skin-tone description used by jsonPromptBuilder. */
+  skinTone?: string
 }
 
+// bball's GCS bucket is the canonical source of the model faces. The shared
+// Supabase project also serves the originals via the public reference-images
+// bucket. We reference both; adidas content team can replace these with Japan-
+// curated models later.
+const BBALL_BUCKET = 'https://storage.googleapis.com/sagastudios-gnutts'
+const SUPABASE_PUBLIC =
+  'https://ylgmmgdkcazhnubxyoho.supabase.co/storage/v1/object/public/reference-images/Model%20Faces'
+
 export const MODELS: RunningModel[] = [
-  // TODO: port bball's MODEL_OPTIONS from src/components/image-creation/ModelSelector.tsx
-  //       and curate a Japan-market subset, OR substitute new model references
-  //       per the adidas content team.
+  {
+    id: 'female_8',
+    gender: 'female',
+    name: 'Digital Twin Female',
+    faceUrl: `${SUPABASE_PUBLIC}/Female_Model_8.png`,
+    thumbnailUrl: `${BBALL_BUCKET}/model-faces/Female_Model_8_Thumb.jpg`,
+    skinTone: 'medium-brown skin tone',
+  },
+  {
+    id: 'male_8',
+    gender: 'male',
+    name: 'Digital Twin Male',
+    faceUrl: `${SUPABASE_PUBLIC}/Male_Model_8.png`,
+    thumbnailUrl: `${BBALL_BUCKET}/model-faces/Male_Model_8_Thumb.jpg`,
+    skinTone: 'medium-brown skin tone',
+  },
+  {
+    id: 'female_1',
+    gender: 'female',
+    name: 'Woman 1',
+    faceUrl: `${SUPABASE_PUBLIC}/Female_model_v1.jpeg`,
+    skinTone: 'african-american skin',
+  },
+  {
+    id: 'female_3',
+    gender: 'female',
+    name: 'Woman 3 (Asian)',
+    faceUrl: `${SUPABASE_PUBLIC}/Female_Model_2_Asian.jpeg`,
+    skinTone: 'asian skin',
+  },
+  {
+    id: 'female_7',
+    gender: 'female',
+    name: 'Woman 7 (Asian)',
+    faceUrl: `${SUPABASE_PUBLIC}/Female_Model_7.jpg`,
+    skinTone: 'asian skin',
+  },
+  {
+    id: 'male_4',
+    gender: 'male',
+    name: 'Man 4',
+    faceUrl: `${SUPABASE_PUBLIC}/Male_Model_4.jpeg`,
+    skinTone: 'medium-dark skin tone',
+  },
 ]
 
 export const MODELS_BY_ID: Record<string, RunningModel> = Object.fromEntries(
