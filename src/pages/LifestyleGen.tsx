@@ -149,7 +149,21 @@ const LifestyleGen = () => {
           toast.error(`API error for ${pose.name}: ${data.error}`)
           continue
         }
-        if (data?.success) successCount += 1
+        if (data?.success) {
+          successCount += 1
+          // Tag the row with our category. The Edge Function lives in the bball
+          // repo and doesn't know about `category`; without this UPDATE the new
+          // row would be NULL-tagged and invisible to adiGen Gallery (and would
+          // visually cross-contaminate bball). RLS lets users update their own
+          // rows, so the client-side patch is sufficient until the Edge Function
+          // is taught to read `category` from the payload.
+          if (data.assetId) {
+            await supabase
+              .from('assets')
+              .update({ category: CATEGORY_SLUG })
+              .eq('id', data.assetId)
+          }
+        }
       }
 
       if (successCount === 0) {
