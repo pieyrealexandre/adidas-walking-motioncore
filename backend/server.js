@@ -50,7 +50,7 @@ await loadSecrets()
 const { default: Anthropic } = await import('@anthropic-ai/sdk')
 const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY })
 
-const SUPABASE_PROJECT_ID = process.env.SUPABASE_PROJECT_ID || 'xwagmmgbldnmsegliijo'
+const SUPABASE_PROJECT_ID = process.env.SUPABASE_PROJECT_ID || 'ylgmmgdkcazhnubxyoho'
 const SUPABASE_URL = process.env.SUPABASE_URL || `https://${SUPABASE_PROJECT_ID}.supabase.co`
 const SUPABASE_SERVICE_KEY = process.env.SUPA_SERVICE_ROLE_KEY
 
