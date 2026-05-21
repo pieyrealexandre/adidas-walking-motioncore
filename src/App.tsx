@@ -16,6 +16,7 @@ import LifestyleGen from '@/pages/LifestyleGen'
 import Gallery from '@/pages/Gallery'
 import { CopyGenerator } from '@/pages/CopyGenerator'
 import CroppingToolkit from '@/pages/CroppingToolkit'
+import Notebook from '@/pages/Notebook'
 
 const queryClient = new QueryClient()
 
@@ -35,6 +36,7 @@ function App() {
                   <Route path="image-creation/lifestyle" element={<ProtectedRoute><LifestyleGen /></ProtectedRoute>} />
                   <Route path="gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
                   <Route path="copy-generator" element={<ProtectedRoute><CopyGenerator /></ProtectedRoute>} />
+                  <Route path="notebook" element={<ProtectedRoute><Notebook /></ProtectedRoute>} />
                   <Route path="toolkit" element={<ProtectedRoute><CroppingToolkit /></ProtectedRoute>} />
                 </Route>
               </Routes>

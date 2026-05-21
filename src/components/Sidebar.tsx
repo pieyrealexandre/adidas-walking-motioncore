@@ -9,15 +9,17 @@
 
 import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
-import { LayoutDashboard, Image, FileText, Crop, LogOut } from 'lucide-react'
+import { LayoutDashboard, Image, FileText, Crop, BookOpen, PenTool, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
 import { CATEGORY_DISPLAY_NAME } from '@/running-japan'
 
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { name: 'Image Creation', href: '/image-creation', icon: Image },
+  { name: 'Editor', href: '/editor', icon: PenTool },
   { name: 'Gallery', href: '/gallery', icon: Image },
   { name: 'Copy Generator', href: '/copy-generator', icon: FileText },
+  { name: 'Notebook', href: '/notebook', icon: BookOpen },
   { name: 'Cropping Toolkit', href: '/toolkit', icon: Crop },
 ]
 
