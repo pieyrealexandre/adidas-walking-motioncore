@@ -6,12 +6,18 @@ interface AuthState {
   session: Session | null
   user: User | null
   loading: boolean
+  isLoading: boolean
+  logout: () => Promise<void>
 }
 
 const AuthContext = createContext<AuthState | undefined>(undefined)
 
 export function AuthProvider({ children }: { children: ReactNode }) {
-  const [state, setState] = useState<AuthState>({ session: null, user: null, loading: true })
+  const [state, setState] = useState<{ session: Session | null; user: User | null; loading: boolean }>({
+    session: null,
+    user: null,
+    loading: true,
+  })
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
@@ -27,7 +33,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
-  return <AuthContext.Provider value={state}>{children}</AuthContext.Provider>
+  const logout = async () => {
+    await supabase.auth.signOut()
+  }
+
+  return (
+    <AuthContext.Provider
+      value={{ ...state, isLoading: state.loading, logout }}
+    >
+      {children}
+    </AuthContext.Provider>
+  )
 }
 
 export function useAuth(): AuthState {

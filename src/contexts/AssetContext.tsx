@@ -1,21 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useState } from 'react'
+// Ported verbatim from bball repo (src/contexts/AssetContext.tsx).
+// Wraps useSimpleAssets, adds optimistic favorite toggling.
+import React, { createContext, useCallback, useContext, useRef, useState } from 'react'
+import { useSimpleAssets, type OptimizedAsset, type GalleryFilterMode } from '@/hooks/useSimpleAssets'
 import { supabase } from '@/integrations/supabase/client'
-import { CATEGORY_SLUG } from '@/running-japan'
 import { toast } from 'sonner'
-
-export type GalleryFilterMode = 'all' | 'mine' | 'favorites'
-
-export interface OptimizedAsset {
-  id: string
-  user_id: string | null
-  asset_type: 'image' | 'video' | string
-  image_url: string | null
-  thumbnail_url: string | null
-  reference_image_url: string | null
-  status: 'pending' | 'processing' | 'completed' | 'failed' | string | null
-  is_favorite: boolean
-  created_at: string
-}
 
 interface AssetContextType {
   assets: OptimizedAsset[]
@@ -24,6 +12,7 @@ interface AssetContextType {
   refreshAssets: () => Promise<void>
   hasMore: boolean
   loadMore: () => Promise<void>
+  lastRefresh: number
   filterMode: GalleryFilterMode
   setFilterMode: (mode: GalleryFilterMode) => void
   toggleAssetFavorite: (assetId: string) => Promise<void>
@@ -31,124 +20,68 @@ interface AssetContextType {
 
 const AssetContext = createContext<AssetContextType | undefined>(undefined)
 
-const PAGE_SIZE = 24
-
 export const useAssetContext = () => {
   const ctx = useContext(AssetContext)
   if (!ctx) throw new Error('useAssetContext must be used within an AssetProvider')
   return ctx
 }
 
-// Assets are tagged with `category = 'running-japan'` per the v1 data
-// isolation strategy. We filter every query by category so the UI never sees
-// bball rows even if RLS would also permit them.
-async function fetchAssets(opts: {
-  page: number
-  filterMode: GalleryFilterMode
-  userId: string | null
-}): Promise<{ rows: OptimizedAsset[]; hasMore: boolean }> {
-  const from = opts.page * PAGE_SIZE
-  const to = from + PAGE_SIZE - 1
-
-  let query = supabase
-    .from('assets')
-    .select('*')
-    .eq('category', CATEGORY_SLUG)
-    .order('created_at', { ascending: false })
-    .range(from, to)
-
-  if (opts.filterMode === 'mine' && opts.userId) {
-    query = query.eq('user_id', opts.userId)
-  } else if (opts.filterMode === 'favorites') {
-    query = query.eq('is_favorite', true)
-  }
-
-  const { data, error } = await query
-  if (error) throw new Error(error.message)
-  const rows = (data || []) as OptimizedAsset[]
-  return { rows, hasMore: rows.length === PAGE_SIZE }
-}
-
 export const AssetProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [assets, setAssets] = useState<OptimizedAsset[]>([])
-  const [page, setPage] = useState(0)
-  const [hasMore, setHasMore] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
   const [filterMode, setFilterMode] = useState<GalleryFilterMode>('all')
-  const [userId, setUserId] = useState<string | null>(null)
+  const { assets, isLoading, error, hasMore, loadMore, refreshAssets } = useSimpleAssets(12, filterMode)
+  const prevFilterMode = useRef(filterMode)
+  const [localAssets, setLocalAssets] = useState<OptimizedAsset[]>([])
 
-  useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
-      setUserId(data.session?.user?.id ?? null)
-    })
-    const { data: sub } = supabase.auth.onAuthStateChange((_event, session) => {
-      setUserId(session?.user?.id ?? null)
-    })
-    return () => sub.subscription.unsubscribe()
-  }, [])
+  const displayAssets = localAssets.length > 0 ? localAssets : assets
 
-  const refreshAssets = useCallback(async () => {
-    setIsLoading(true)
-    setError(null)
-    try {
-      const { rows, hasMore } = await fetchAssets({ page: 0, filterMode, userId })
-      setAssets(rows)
-      setHasMore(hasMore)
-      setPage(0)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load assets')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [filterMode, userId])
+  React.useEffect(() => {
+    setLocalAssets(assets)
+  }, [assets])
 
-  const loadMore = useCallback(async () => {
-    if (!hasMore || isLoading) return
-    setIsLoading(true)
-    try {
-      const next = page + 1
-      const { rows, hasMore: more } = await fetchAssets({ page: next, filterMode, userId })
-      setAssets((prev) => [...prev, ...rows])
-      setHasMore(more)
-      setPage(next)
-    } catch (e) {
-      setError(e instanceof Error ? e.message : 'Failed to load more')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [page, hasMore, isLoading, filterMode, userId])
-
-  useEffect(() => {
+  React.useEffect(() => {
+    if (prevFilterMode.current === filterMode) return
+    prevFilterMode.current = filterMode
     refreshAssets()
-  }, [refreshAssets])
+  }, [filterMode, refreshAssets])
 
   const toggleAssetFavorite = useCallback(
     async (assetId: string) => {
-      const current = assets.find((a) => a.id === assetId)
+      const current = displayAssets.find((a) => a.id === assetId)
       if (!current) return
       const next = !current.is_favorite
-      setAssets((prev) => prev.map((a) => (a.id === assetId ? { ...a, is_favorite: next } : a)))
-      const { error } = await supabase.from('assets').update({ is_favorite: next }).eq('id', assetId)
-      if (error) {
-        setAssets((prev) =>
+
+      setLocalAssets((prev) =>
+        prev.map((a) => (a.id === assetId ? { ...a, is_favorite: next } : a)),
+      )
+
+      try {
+        const { error } = await supabase.from('assets').update({ is_favorite: next }).eq('id', assetId)
+        if (error) {
+          setLocalAssets((prev) =>
+            prev.map((a) => (a.id === assetId ? { ...a, is_favorite: current.is_favorite } : a)),
+          )
+          toast.error('Failed to update favorite')
+        }
+      } catch {
+        setLocalAssets((prev) =>
           prev.map((a) => (a.id === assetId ? { ...a, is_favorite: current.is_favorite } : a)),
         )
         toast.error('Failed to update favorite')
       }
     },
-    [assets],
+    [displayAssets],
   )
 
   return (
     <AssetContext.Provider
       value={{
-        assets,
+        assets: displayAssets,
         isLoading,
         error,
         refreshAssets,
         hasMore,
         loadMore,
+        lastRefresh: Date.now(),
         filterMode,
         setFilterMode,
         toggleAssetFavorite,
@@ -158,3 +91,5 @@ export const AssetProvider: React.FC<{ children: React.ReactNode }> = ({ childre
     </AssetContext.Provider>
   )
 }
+
+export type { OptimizedAsset, GalleryFilterMode }
