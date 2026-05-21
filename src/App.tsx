@@ -13,6 +13,7 @@ import { Login } from '@/pages/Login'
 import Dashboard from '@/pages/Dashboard'
 import ImageCreation from '@/pages/ImageCreation'
 import LifestyleGen from '@/pages/LifestyleGen'
+import Editor from '@/pages/Editor'
 import Gallery from '@/pages/Gallery'
 import { CopyGenerator } from '@/pages/CopyGenerator'
 import CroppingToolkit from '@/pages/CroppingToolkit'
@@ -34,6 +35,7 @@ function App() {
                   <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="image-creation" element={<ProtectedRoute><ImageCreation /></ProtectedRoute>} />
                   <Route path="image-creation/lifestyle" element={<ProtectedRoute><LifestyleGen /></ProtectedRoute>} />
+                  <Route path="editor" element={<ProtectedRoute><Editor /></ProtectedRoute>} />
                   <Route path="gallery" element={<ProtectedRoute><Gallery /></ProtectedRoute>} />
                   <Route path="copy-generator" element={<ProtectedRoute><CopyGenerator /></ProtectedRoute>} />
                   <Route path="notebook" element={<ProtectedRoute><Notebook /></ProtectedRoute>} />
