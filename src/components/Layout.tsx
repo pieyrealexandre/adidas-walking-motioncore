@@ -26,6 +26,12 @@ export function Layout() {
             <Link to="/toolkit" className="hover:text-neutral-900">
               Cropping Toolkit
             </Link>
+            <Link to="/lifestyle" className="hover:text-neutral-900">
+              Lifestyle Gen
+            </Link>
+            <Link to="/gallery" className="hover:text-neutral-900">
+              Gallery
+            </Link>
             {user ? (
               <>
                 <span className="text-neutral-400">{user.email}</span>
