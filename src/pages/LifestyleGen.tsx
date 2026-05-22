@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { RotateCcw } from 'lucide-react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAssetContext } from '@/contexts/AssetContext'
-import { CATEGORY_SLUG } from '@/running-japan'
+import { CATEGORY_SLUG, STORAGE_KEYS } from '@/running-japan'
 import { POSES, POSES_BY_ID, type RunningPose } from '@/running-japan/poses'
 import { LOCATIONS_BY_ID, SCENE_STYLES_BY_ID } from '@/running-japan/references'
 import { PRODUCTS_BY_ID } from '@/running-japan/garments'
@@ -52,7 +52,7 @@ const LifestyleGen = () => {
     : null
 
   useEffect(() => {
-    const stored = localStorage.getItem('lastLifestyleGeneration-running-japan')
+    const stored = localStorage.getItem(STORAGE_KEYS.lastLifestyleGeneration)
     if (stored) {
       try {
         setLastGenerationPayloads(JSON.parse(stored))
@@ -172,7 +172,7 @@ const LifestyleGen = () => {
       }
 
       if (allPayloads.length > 0) {
-        localStorage.setItem('lastLifestyleGeneration-running-japan', JSON.stringify(allPayloads))
+        localStorage.setItem(STORAGE_KEYS.lastLifestyleGeneration, JSON.stringify(allPayloads))
         setLastGenerationPayloads(allPayloads)
       }
 

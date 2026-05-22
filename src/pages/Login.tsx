@@ -2,6 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
+import { CATEGORY_DISPLAY_NAME } from '@/running-japan'
 
 export function Login() {
   const { user, loading } = useAuth()
@@ -39,7 +40,7 @@ export function Login() {
   return (
     <div className="max-w-sm">
       <h1 className="text-2xl font-semibold tracking-tight text-neutral-900">Sign in</h1>
-      <p className="mt-1 text-sm text-neutral-500">adiGen — Running Japan</p>
+      <p className="mt-1 text-sm text-neutral-500">adiGen — {CATEGORY_DISPLAY_NAME}</p>
 
       <form onSubmit={onSubmit} className="mt-6 space-y-4">
         <div>

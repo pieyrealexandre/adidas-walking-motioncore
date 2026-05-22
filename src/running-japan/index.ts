@@ -3,6 +3,11 @@ import copyGuidelines from './copy-guidelines.md?raw'
 export const CATEGORY_SLUG = 'running-japan' as const
 export const CATEGORY_DISPLAY_NAME = 'Running — Japan'
 
+export const STORAGE_KEYS = {
+  lastLifestyleGeneration: `lastLifestyleGeneration-${CATEGORY_SLUG}`,
+  lastGroupShotGeneration: `lastGroupShotGeneration-${CATEGORY_SLUG}`,
+} as const
+
 export { copyGuidelines }
 
 // Copy generator data

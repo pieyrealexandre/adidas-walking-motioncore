@@ -21,7 +21,7 @@ import { cn } from '@/lib/utils'
 import { supabase } from '@/integrations/supabase/client'
 import { toast } from 'sonner'
 import { useAssetContext } from '@/contexts/AssetContext'
-import { CATEGORY_SLUG } from '@/running-japan'
+import { CATEGORY_SLUG, STORAGE_KEYS } from '@/running-japan'
 import { LOCATIONS, LOCATIONS_BY_ID } from '@/running-japan/references'
 import { PRODUCTS_BY_ID } from '@/running-japan/garments'
 import { getModelById, type ModelId } from '@/components/image-creation/ModelSelector'
@@ -63,12 +63,12 @@ const GroupShotPage = () => {
   const [lastGenerationPayload, setLastGenerationPayload] = useState<any | null>(null)
 
   useEffect(() => {
-    const stored = localStorage.getItem('lastGroupShotGeneration-running-japan')
+    const stored = localStorage.getItem(STORAGE_KEYS.lastGroupShotGeneration)
     if (stored) {
       try {
         setLastGenerationPayload(JSON.parse(stored))
       } catch {
-        localStorage.removeItem('lastGroupShotGeneration-running-japan')
+        localStorage.removeItem(STORAGE_KEYS.lastGroupShotGeneration)
       }
     }
   }, [])
@@ -153,7 +153,7 @@ const GroupShotPage = () => {
 
   const handleGenerateOne = async (pose: GroupPoseId) => {
     const payload = buildPayload(pose)
-    localStorage.setItem('lastGroupShotGeneration-running-japan', JSON.stringify(payload))
+    localStorage.setItem(STORAGE_KEYS.lastGroupShotGeneration, JSON.stringify(payload))
     setLastGenerationPayload(payload)
 
     const response = await supabase.functions.invoke('generate-group-shot', { body: payload })
