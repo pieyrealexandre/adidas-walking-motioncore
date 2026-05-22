@@ -1,6 +1,7 @@
 import { useState } from 'react'
-import { useAssetContext, type GalleryFilterMode } from '@/contexts/AssetContext'
+import { useAssetContext } from '@/contexts/AssetContext'
 import { Button } from '@/components/ui/button'
+import { ToggleGroup, ToggleGroupItem } from '@/components/ui/toggle-group'
 import { Loader2, Heart, User, RefreshCw, AlertCircle } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
@@ -26,12 +27,6 @@ const Gallery = () => {
 
   const getImageSource = (asset: any) => asset.thumbnail_url || asset.image_url
 
-  const filterOptions: Array<{ id: GalleryFilterMode; label: string; icon?: React.ReactNode }> = [
-    { id: 'all', label: 'All' },
-    { id: 'mine', label: 'My Images', icon: <User className="h-4 w-4" /> },
-    { id: 'favorites', label: 'Favorites', icon: <Heart className="h-4 w-4" /> },
-  ]
-
   return (
     <div className="flex flex-col">
       <div className="pb-6 flex items-center justify-between">
@@ -46,23 +41,28 @@ const Gallery = () => {
           </p>
         </div>
         <div className="flex items-center gap-4">
-          <div className="border rounded-lg p-1 flex gap-1">
-            {filterOptions.map((opt) => (
-              <button
-                key={opt.id}
-                onClick={() => setFilterMode(opt.id)}
-                className={cn(
-                  'px-3 py-1.5 text-sm rounded flex items-center gap-2 transition-colors',
-                  filterMode === opt.id
-                    ? 'bg-neutral-900 text-white'
-                    : 'text-neutral-600 hover:bg-neutral-100',
-                )}
-              >
-                {opt.icon}
-                {opt.label}
-              </button>
-            ))}
-          </div>
+          <ToggleGroup
+            type="single"
+            value={filterMode}
+            onValueChange={(value) => {
+              if (value === 'all' || value === 'mine' || value === 'favorites') {
+                setFilterMode(value)
+              }
+            }}
+            className="border rounded-lg p-1"
+          >
+            <ToggleGroupItem value="all" aria-label="Show all images">
+              All
+            </ToggleGroupItem>
+            <ToggleGroupItem value="mine" aria-label="Show only my images">
+              <User className="h-4 w-4 mr-2" />
+              My Images
+            </ToggleGroupItem>
+            <ToggleGroupItem value="favorites" aria-label="Show favorites only">
+              <Heart className="h-4 w-4 mr-2" />
+              Favorites
+            </ToggleGroupItem>
+          </ToggleGroup>
           <Button
             onClick={handleManualRefresh}
             disabled={isManualRefreshing}

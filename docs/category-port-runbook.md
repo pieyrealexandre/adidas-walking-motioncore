@@ -32,12 +32,14 @@ Listed roughly in shipping order (not original-plan order — see the gap analys
 - adiGen frontend on Vercel pointing at the above.
 
 ### Phase 1 — Database migrations (additive only)
-- `assets` — added `category` text column, backfilled 46,055 existing rows to `'basketball'`, added `(category, user_id)` index. **Not yet:** NOT NULL constraint, RLS policies for adiGen.
+- `assets` — added `category` text column, backfilled 46,055 existing rows to `'basketball'`, added `(category, user_id)` index. **Not yet:** NOT NULL constraint.
 - `saved_copy` — same pattern, 25 rows backfilled.
 - `copy_projects` — same pattern, 3 rows backfilled.
 - `reference_images` — same pattern, 4 rows backfilled.
 
 bball is unaffected — its queries never reference the new column, so backfilled `'basketball'` rows stay visible to it.
+
+**RLS audit (2026-05-21):** all four tables already had RLS enabled with sensible policies — `saved_copy`, `copy_projects`, `reference_images` are user-scoped on all CRUD; `assets` is user-scoped on INSERT/UPDATE/DELETE and uses bball's community-gallery model on SELECT (any signed-in user sees all rows). Decision: adiGen mirrors that shared-workspace model for running-japan — no migration applied. See "RLS is shared-workspace, not per-user" in the Known gotchas section for how to flip a future category to per-user private if needed.
 
 ### Phase 2 — Copy Generator (shipped, then re-done to mirror bball)
 - Initial port was a minimal form; rebuilt to mirror bball's full UX:
@@ -164,6 +166,93 @@ gh api -H "Accept: application/vnd.github.raw" \
   repos/pieyrealexandre/sagastudioxadidasbball/contents/src/<path> > <local-path>
 ```
 
+### 8. Wire the shadcn design tokens in `src/index.css` BEFORE porting any page
+
+bball ships on **Tailwind v3 + shadcn**. adiGen ships on **Tailwind v4 + the same shadcn component files**. The shadcn components use semantic utility classes — `bg-card`, `border-border`, `bg-primary`, `text-muted-foreground`, `bg-accent`, `bg-popover`, `text-foreground`, `ring-ring`, etc. — that **don't exist in Tailwind v4 by default**. v4 generates utilities from `@theme` declarations only.
+
+If you skip this step, half the ported UI silently renders with broken/missing colors (the Sidebar will look transparent, borders will disappear, primary buttons won't get their slate fill) while the *other* half — the components that hardcode `bg-white`/`border-neutral-300` — looks fine. This split is what made the running-japan port look visually inconsistent until [src/index.css](../src/index.css) was rewritten.
+
+Drop this verbatim into `src/index.css` (it's a port of bball's effective theme, expressed in Tailwind v4 syntax):
+
+```css
+@import "tailwindcss";
+
+@layer base {
+  :root {
+    --background: 0 0% 100%;
+    --foreground: 222.2 47.4% 11.2%;
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 47.4% 11.2%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 47.4% 11.2%;
+    --primary: 222.2 47.4% 11.2%;
+    --primary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96.1%;
+    --secondary-foreground: 222.2 47.4% 11.2%;
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+    --accent: 210 40% 96.1%;
+    --accent-foreground: 222.2 47.4% 11.2%;
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: 215 20.2% 65.1%;
+    --radius: 0.5rem;
+  }
+}
+
+@theme inline {
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+
+  /* v4 renamed shadow-sm to shadow-xs; v4's shadow-sm = v3's plain `shadow`.
+   * Restore v3's shadow-sm so bball-ported `shadow-sm hover:shadow-lg` cards
+   * keep their subtle lift. md/lg already match v3 numerically. */
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+@layer base {
+  /* v4 changed bare `border` default from gray-200 to currentColor — without
+   * this, every `border rounded-lg ...` in the app renders near-black because
+   * text-foreground is slate-900. Restore shadcn's convention. */
+  *,
+  ::before,
+  ::after {
+    border-color: hsl(var(--border));
+  }
+
+  body {
+    background-color: hsl(var(--background));
+    color: hsl(var(--foreground));
+    font-feature-settings: "rlig" 1, "calt" 1;
+  }
+}
+```
+
+**Mixed token usage is intentional in bball — don't "consolidate" it.** bball's Sidebar / Layout / Dashboard chrome use semantic tokens (`bg-card`, `border-border`, `bg-primary`). Page interiors (ImageCreation cards, ProductImageCreation, GroupShotPage, LifestyleImageCreation) use the raw Tailwind palette (`bg-white`, `border-gray-200`, `text-gray-900`, `bg-gray-100`). The split is load-bearing; the chrome inherits the theme so a dark mode would just work, while the page interiors are deliberately neutral. Port both styles verbatim — don't normalize one to the other.
+
 ---
 
 ## What the initial plan got wrong (and what to do instead)
@@ -199,6 +288,19 @@ What happened: I designed a custom topbar nav. User pointed out bball uses a sid
 ### Sub-optimal: my AssetContext from scratch
 What happened: wrote my own AssetContext with direct supabase queries, no caching, no realtime. Replaced it with bball's verbatim `AssetContext` wrapping `useSimpleAssets` + `useAssetRealtime`.
 **Next time:** for contexts and hooks that wrap supabase queries, default to porting bball's version. Customization is almost never warranted; the bball version handles edge cases (cache, abort handling, visibility-change refresh, optimistic favorites) you'll re-derive otherwise.
+
+### Missed: Tailwind v4 ↔ v3 shadcn migration gotchas
+
+What happened: the initial port set `src/index.css` to just `@import "tailwindcss";` and moved on. That's what `npm create vite` scaffolds and it *looked* fine on the first few pages (because Button/Card/Input/Textarea/Dialog all hardcoded `bg-white` / `border-neutral-300`). The bball-aligned semantic tokens used by Sidebar, Layout, Dashboard, Badge, Alert, Select, Checkbox silently produced no styling — `bg-card` was a missing utility, `border-border` was a missing utility, etc. The split showed up later as "the Sidebar looks broken but the buttons are fine", and even later (once tokens were wired) as two further v4 surprises:
+
+- **Bare `border` renders near-black.** Tailwind v3 hardcoded `border` to `border-gray-200`. Tailwind v4 falls back to `currentColor`, which on a slate-foreground app is roughly `#0F172A`. Every `border rounded-lg p-3` in CopyGenerator, every section divider, every dashboard tile got a black outline that bball doesn't have. Fix is the `*, ::before, ::after { border-color: hsl(var(--border)); }` global rule in `@layer base`.
+- **`shadow-sm` is now heavier.** Tailwind v4 renamed the shadow scale — v3's `shadow-sm` (`0 1px 2px 0 / 5%`, single layer) is now `shadow-xs`, and v4's `shadow-sm` is v3's plain `shadow` (`0 1px 3px / 10%`, two layers). bball's card pattern `shadow-sm hover:shadow-lg` therefore drew a noticeably heavier drop shadow in adiGen. Fix is overriding `--shadow-sm` back to the v3 value in `@theme inline`.
+
+Why the plan missed it: the port plan listed components, hooks, contexts, routes, and migrations — but treated CSS / theme config as "infra, not application code", on the assumption that Tailwind would behave the same in both repos. It doesn't. And bball's effective theme lives partly in `tailwind.config.js` + a CSS file that wasn't in the local mirror, so the gap was invisible until ported pages were viewed side-by-side.
+
+**Next time:** **theme first**. Before porting any page, copy the index.css block from pattern #8 into the new project's `src/index.css`. Verify the served CSS contains `.bg-card { background-color: hsl(var(--card)) }` and `.border-border { border-color: hsl(var(--border)) }` (curl `http://localhost:5173/src/index.css | grep -oE '\.bg-card|\.border-border'`) before declaring Phase 0 done. Then port pages on top of a known-working theme — issues that surface afterward are real porting bugs, not theme drift.
+
+Quick smoke test once theme is wired: load the Sidebar — if its background panel is visible and its border is a light slate (not invisible, not black), the theme is live. The dashboard cards, copy-generator group borders, and `/image-creation` card shadow are the next things to eyeball — they regressed in three different ways during the running-japan port and were the canary for each v4-vs-v3 issue.
 
 ### What was useful in the plan
 - The "earn the abstraction" framing — building running-japan as a concrete `src/running-japan/` folder instead of a multi-tenant `src/categories/<slug>/` platform was the right call. We can extract the abstraction later from two real implementations.
@@ -261,6 +363,7 @@ Files to port from bball (verified working in running-japan port):
 
 | bball file | adaptation needed |
 |---|---|
+| `index.css` | replace with the v4-flavored `@theme` block from pattern #8 above — **do this before any page port** |
 | `App.tsx` | imports + route table |
 | `components/Layout.tsx` | update FULL_BLEED_ROUTES |
 | `components/Sidebar.tsx` | nav items list |
@@ -353,6 +456,38 @@ Notebook reads `saved_copy`. CopyGenerator writes via the heart button. If you p
 ### Layout full-bleed routes list is brittle
 Every new image-creation route needs to be added to `FULL_BLEED_ROUTES` in `Layout.tsx` or it'll render with sidebar padding instead of edge-to-edge. Easy to miss when adding a new generation mode.
 
+### Tailwind v4 vs the bball Tailwind v3 baseline
+adiGen is on Tailwind v4 (`@tailwindcss/vite`); bball is on Tailwind v3. When you port a bball component verbatim, three things behave differently and need explicit handling in `src/index.css` (see pattern #8 for the full block):
+
+1. **Semantic tokens don't exist by default in v4.** Classes like `bg-card`, `border-border`, `bg-primary`, `text-muted-foreground`, `bg-popover`, `ring-ring`, `bg-accent` only become real utilities after they're declared in an `@theme` block. Without it, half the ported markup renders unstyled.
+2. **`border` without a color is `currentColor`.** v3 hardcoded the default border color to `gray-200`; v4 dropped that. Add the universal selector reset (`*, ::before, ::after { border-color: hsl(var(--border)); }`) inside `@layer base`.
+3. **`shadow-sm` is one step heavier.** v4 renamed the scale: v3's `shadow-sm` is now `shadow-xs`; v4's `shadow-sm` is v3's plain `shadow`. Override `--shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05)` in `@theme inline` to keep bball-ported cards (`shadow-sm hover:shadow-lg`) rendering correctly.
+
+If a ported page looks "almost right but the borders are black" or "shadows are too heavy" or "Sidebar is invisible", you're hitting one of these three. They are all theme-level fixes — never patch them by editing individual ported components, that erases the verbatim alignment with bball and you'll have to redo it next port.
+
+### RLS is shared-workspace, not per-user
+`/gallery` shows running-japan assets from **all adiGen users**, not just the signed-in user. This was an explicit decision, mirroring bball's community-gallery model (any signed-in user can see every asset). The "All" vs "My Images" toggle is client-side filtering on top of that — "All" really does mean everyone's, "My Images" filters by `user_id = auth.uid()`.
+
+If a future category wants per-user privacy on `assets` instead, add a RESTRICTIVE policy specifically for that category's slug:
+
+```sql
+CREATE POLICY "<slug>: own-assets only"
+  ON public.assets
+  AS RESTRICTIVE
+  FOR SELECT
+  TO authenticated
+  USING (
+    category IS DISTINCT FROM '<slug>'
+    OR user_id = (SELECT auth.uid())
+  );
+```
+
+RESTRICTIVE policies AND with bball's existing PERMISSIVE "any signed-in user can SELECT" policy, so they surgically narrow visibility *only* for that category's rows without affecting bball or other categories. Use `IS DISTINCT FROM` (not `!=`) so in-flight rows tagged `NULL` (between the Edge Function INSERT and the client-side category-tag band-aid) aren't accidentally hidden.
+
+When applied, the `/gallery` "All" toggle becomes meaningless — remove it from the filter UI rather than leaving a control that does nothing.
+
+The other three tables (`saved_copy`, `copy_projects`, `reference_images`) are already user-scoped on all four CRUD ops — no additional policy needed for any category.
+
 ### POSE_VARIATIONS in bball's LifestyleImageCreation
 bball swaps the pose thumbnail based on the selected model's gender (e.g. `Standing_FullBack_NOBall_Man.webp` vs `_Woman.webp`). adiGen's simpler version doesn't. If we add gender-aware pose thumbnails later, port the lookup.
 
@@ -379,7 +514,7 @@ Tracked here so the next category port can decide what to inherit:
 
 1. **Edge Function refactor** to read `category` from request body → drops the client-side category-tag band-aid. Lives in bball repo.
 2. **NOT NULL constraint** on `category` columns. Requires bball patch first so its INSERTs write `'basketball'`.
-3. **adiGen RLS policies** scoped strictly by `category`. Additive; bball policies stay untouched. Required before launch.
+3. ~~**adiGen RLS policies** scoped strictly by `category`~~ — audited and resolved. See "RLS audit + shared-workspace decision" below.
 4. **Cross-category isolation tests** in CI.
 5. **Sidebar collapse + tooltip behavior** from bball, not yet ported.
 6. **Gallery's ToggleGroup migration** — Gallery still uses my hand-rolled filter buttons. Swap for the actual `ToggleGroup` primitive we ported later.
