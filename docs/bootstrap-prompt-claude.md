@@ -1,8 +1,9 @@
 # adiGen — A-to-Z bootstrap prompt for Claude Code
 
-Paste the prompt below into a fresh Claude Code session that's running in a **freshly-cloned** adigen repo (e.g., `git clone https://github.com/pieyrealexandre/adigen.git adigen-<slug> && cd adigen-<slug>`).
+Paste the prompt below into a fresh Claude Code session **in any directory where you have write permissions**. Claude will clone the adigen repo into a new subdirectory as Phase 0, then drive the rest of the bootstrap from there.
 
 Before pasting, verify:
+- `git` is installed (`git --version`)
 - `gcloud auth list` shows your GCP user with access to `manifest-vault-452305-a8`
 - `gh auth status` shows you authenticated to GitHub
 - Supabase MCP tools are connected (in Claude Code: check `mcp__claude_ai_Supabase__list_projects` returns results)
@@ -14,8 +15,9 @@ Before pasting, verify:
 ## The prompt
 
 ```
-I'm bootstrapping a NEW adiGen category from this freshly-cloned adigen
-repo. Take me from here to a fully working deployment, A to Z.
+I'm bootstrapping a NEW adiGen category from scratch. Clone the adigen
+repo into the current directory, then take me from there to a fully
+working deployment, A to Z.
 
 ═══ INPUTS (replace these placeholders before sending) ═══
 - Category slug (kebab-case, used in URLs/buckets/DB):  football-emea
@@ -69,6 +71,26 @@ sentence and pause for my "go" before starting the next. For any DESTRUCTIVE
 step (DB migration, bucket create, Cloud Run deploy, repo push, Vercel
 deploy), print the EXACT command/SQL FIRST and wait for explicit "yes" before
 running.
+
+────────────────────────────────────────────────────────────
+PHASE 0 — CLONE THE REPO
+────────────────────────────────────────────────────────────
+- Run `Get-Location` and record the starting directory. The clone will
+  go into <starting-dir>/<repo-name>.
+- Verify the target does NOT already exist:
+    Test-Path <repo-name>   # must return False
+  If it returns True, STOP and ask whether to use the existing
+  directory or pick a different repo name.
+- Clone (no approval needed — read-only network operation):
+    git clone https://github.com/pieyrealexandre/adigen.git <repo-name>
+- cd into the new clone:
+    Set-Location <repo-name>
+- Sanity-check you're in the right place:
+    Get-Location               # should end with \<repo-name>
+    Test-Path docs/new-category-bootstrap.md   # must return True
+- For the rest of this workflow, all relative paths (docs/..., src/...)
+  resolve against this clone directory. Read/Edit/Write tool calls
+  MUST use absolute paths under <starting-dir>/<repo-name>/.
 
 ────────────────────────────────────────────────────────────
 PHASE 1 — PLAN & CONFIRM
