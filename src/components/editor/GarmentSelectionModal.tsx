@@ -12,7 +12,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/components/u
 import { Button } from '@/components/ui/button'
 import { ScrollArea } from '@/components/ui/scroll-area'
 import { cn } from '@/lib/utils'
-import { SHOES, TOPS, BOTTOMS } from '@/running-japan/garments'
+import { SHOES, TOPS, BOTTOMS } from '@/walking-motioncore/garments'
 
 interface GarmentItem {
   id: string

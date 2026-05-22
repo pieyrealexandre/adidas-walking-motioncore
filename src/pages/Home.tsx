@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { CATEGORY_DISPLAY_NAME } from '@/running-japan'
+import { CATEGORY_DISPLAY_NAME } from '@/walking-motioncore'
 
 export function Home() {
   return (

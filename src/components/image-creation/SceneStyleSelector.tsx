@@ -1,7 +1,7 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { Palette } from 'lucide-react'
-import { SCENE_STYLES_BY_ID } from '@/running-japan/references'
+import { SCENE_STYLES_BY_ID } from '@/walking-motioncore/references'
 
 export type SceneStyle = string
 

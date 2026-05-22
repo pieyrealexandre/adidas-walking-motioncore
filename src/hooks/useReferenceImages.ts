@@ -8,7 +8,7 @@
 
 import { useEffect, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
-import { CATEGORY_SLUG } from '@/running-japan'
+import { CATEGORY_SLUG } from '@/walking-motioncore'
 
 export interface ReferenceImageFile {
   id: string

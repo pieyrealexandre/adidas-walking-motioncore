@@ -10,16 +10,16 @@
 // flags. The prompt builder mostly assembles fields from data instead of
 // branching on poseId.
 
-import { POSES_BY_ID, type RunningPose } from '@/running-japan/poses'
+import { POSES_BY_ID, type RunningPose } from '@/walking-motioncore/poses'
 import {
   PRODUCTS_BY_ID,
   type RunningProduct,
-} from '@/running-japan/garments'
+} from '@/walking-motioncore/garments'
 import {
   LOCATIONS_BY_ID,
   SCENE_STYLES_BY_ID,
   MODELS_BY_ID,
-} from '@/running-japan/references'
+} from '@/walking-motioncore/references'
 
 export type Gender = 'male' | 'female'
 

@@ -5,10 +5,10 @@ import { Button } from '@/components/ui/button'
 import { OptimizedImage } from './OptimizedImage'
 import type { ProductCategory } from './ProductPicker'
 import type { ModelId } from './ModelSelector'
-import { MODELS_BY_GENDER } from '@/running-japan/references'
-import { POSES } from '@/running-japan/poses'
-import { SHOES, TOPS, BOTTOMS } from '@/running-japan/garments'
-import { LOCATIONS, SCENE_STYLES } from '@/running-japan/references'
+import { MODELS_BY_GENDER } from '@/walking-motioncore/references'
+import { POSES } from '@/walking-motioncore/poses'
+import { SHOES, TOPS, BOTTOMS } from '@/walking-motioncore/garments'
+import { LOCATIONS, SCENE_STYLES } from '@/walking-motioncore/references'
 
 export type LocationId = string
 export type SceneStyleId = string

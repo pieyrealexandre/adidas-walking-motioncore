@@ -35,7 +35,7 @@ import { AlertCircle, CheckCircle2, ChevronDown, Heart, Loader2, RefreshCw } fro
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
-import { CATEGORY_SLUG, PRODUCTS } from '@/running-japan'
+import { CATEGORY_SLUG, PRODUCTS } from '@/walking-motioncore'
 
 interface CopyProject {
   id: string

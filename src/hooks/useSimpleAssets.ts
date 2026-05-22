@@ -11,7 +11,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { CATEGORY_SLUG } from '@/running-japan'
+import { CATEGORY_SLUG } from '@/walking-motioncore'
 import { useAssetRealtime, type AssetChangePayload } from './useAssetRealtime'
 
 export interface OptimizedAsset {

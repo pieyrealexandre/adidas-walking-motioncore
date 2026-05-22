@@ -34,7 +34,7 @@ import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { CATEGORY_SLUG } from '@/running-japan'
+import { CATEGORY_SLUG } from '@/walking-motioncore'
 import { toast } from 'sonner'
 
 interface SavedCopyItem {

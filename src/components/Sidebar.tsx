@@ -14,7 +14,7 @@ import { NavLink } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { LayoutDashboard, Image, FileText, Crop, BookOpen, PenTool, LogOut } from 'lucide-react'
 import { useAuth } from '@/contexts/AuthContext'
-import { CATEGORY_DISPLAY_NAME } from '@/running-japan'
+import { CATEGORY_DISPLAY_NAME } from '@/walking-motioncore'
 import { useIsSidebarCollapsed } from '@/hooks/use-mobile'
 import {
   Tooltip,

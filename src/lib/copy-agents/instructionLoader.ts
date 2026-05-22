@@ -3,7 +3,7 @@ import brandGuidelines from '@instructions/brand-guidelines.md?raw'
 import wordsToAvoid from '@instructions/words-to-avoid.md?raw'
 import productNaming from '@instructions/product-naming.md?raw'
 import supernovaGuidelines from '@instructions/products/supernova.md?raw'
-import { copyGuidelines as runningJapanCopyGuidelines } from '@/running-japan'
+import { copyGuidelines as runningJapanCopyGuidelines } from '@/walking-motioncore'
 
 const GLOBAL_INSTRUCTIONS = [
   adidasCopyGuide,

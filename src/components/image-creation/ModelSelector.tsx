@@ -1,7 +1,7 @@
 import React from 'react'
 import { cn } from '@/lib/utils'
 import { User } from 'lucide-react'
-import { MODELS, MODELS_BY_ID, MODELS_BY_GENDER, type RunningModel } from '@/running-japan/references'
+import { MODELS, MODELS_BY_ID, MODELS_BY_GENDER, type RunningModel } from '@/walking-motioncore/references'
 
 export type ModelId = string
 export type ModelOption = RunningModel

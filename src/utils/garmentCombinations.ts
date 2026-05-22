@@ -12,8 +12,8 @@ import {
   PRODUCTS_BY_ID,
   findGarmentCombination,
   resolveProductImageUrl,
-} from '@/running-japan/garments'
-import { POSES_BY_ID, type RunningPose } from '@/running-japan/poses'
+} from '@/walking-motioncore/garments'
+import { POSES_BY_ID, type RunningPose } from '@/walking-motioncore/poses'
 
 export interface BuildGarmentImageUrlsResult {
   imageUrls: string[]

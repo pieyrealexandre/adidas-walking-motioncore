@@ -2,7 +2,7 @@ import { useEffect, useState, type FormEvent } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { supabase } from '@/integrations/supabase/client'
 import { useAuth } from '@/contexts/AuthContext'
-import { CATEGORY_DISPLAY_NAME } from '@/running-japan'
+import { CATEGORY_DISPLAY_NAME } from '@/walking-motioncore'
 
 export function Login() {
   const { user, loading } = useAuth()

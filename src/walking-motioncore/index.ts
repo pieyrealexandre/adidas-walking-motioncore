@@ -1,7 +1,7 @@
 import copyGuidelines from './copy-guidelines.md?raw'
 
-export const CATEGORY_SLUG = 'running-japan' as const
-export const CATEGORY_DISPLAY_NAME = 'Running — Japan'
+export const CATEGORY_SLUG = 'walking-motioncore' as const
+export const CATEGORY_DISPLAY_NAME = 'Walking — Motioncore'
 
 export const STORAGE_KEYS = {
   lastLifestyleGeneration: `lastLifestyleGeneration-${CATEGORY_SLUG}`,
