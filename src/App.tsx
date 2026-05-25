@@ -10,6 +10,7 @@ import Layout from '@/components/Layout'
 import ProtectedRoute from '@/components/ProtectedRoute'
 import Index from '@/pages/Index'
 import Login from '@/pages/Login'
+import Handoff from '@/pages/Handoff'
 import Dashboard from '@/pages/Dashboard'
 import ImageCreation from '@/pages/ImageCreation'
 import LifestyleGen from '@/pages/LifestyleGen'
@@ -33,6 +34,7 @@ function App() {
               <Routes>
                 <Route path="/" element={<Index />} />
                 <Route path="/login" element={<Login />} />
+                <Route path="/auth/handoff" element={<Handoff />} />
                 <Route path="/" element={<Layout />}>
                   <Route path="dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
                   <Route path="image-creation" element={<ProtectedRoute><ImageCreation /></ProtectedRoute>} />
