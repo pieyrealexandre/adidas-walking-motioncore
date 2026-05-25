@@ -7,6 +7,7 @@ interface AuthState {
   user: User | null
   loading: boolean
   isLoading: boolean
+  login: (email: string, password: string) => Promise<boolean>
   logout: () => Promise<void>
 }
 
@@ -33,13 +34,18 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   }, [])
 
+  const login = async (email: string, password: string): Promise<boolean> => {
+    const { error } = await supabase.auth.signInWithPassword({ email, password })
+    return !error
+  }
+
   const logout = async () => {
     await supabase.auth.signOut()
   }
 
   return (
     <AuthContext.Provider
-      value={{ ...state, isLoading: state.loading, logout }}
+      value={{ ...state, isLoading: state.loading, login, logout }}
     >
       {children}
     </AuthContext.Provider>
